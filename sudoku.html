@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101426">
+  <title>Sudoku</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101426;
+      --panel: #191f35;
+      --panel-2: #202943;
+      --line: #39445f;
+      --line-strong: #8290b2;
+      --text: #f3f5ff;
+      --muted: #a6b0ca;
+      --accent: #8d7aff;
+      --accent-2: #6f5bea;
+      --good: #48d6a0;
+      --bad: #ff7185;
+      --cell: #171e33;
+      --cell-hover: #293452;
+      --selected: #51458e;
+      --related: #252e49;
+      --same: #37315f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 16px 40px;
+      background:
+        radial-gradient(ellipse at 50% -15%, rgba(126,105,255,.20), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button { font: inherit; }
+    .app { width: min(100%, 760px); margin: 0 auto; }
+    header { text-align: center; margin-bottom: 24px; }
+    .eyebrow {
+      color: #a99cff; text-transform: uppercase; letter-spacing: .2em;
+      font-size: .72rem; font-weight: 800; margin-bottom: 8px;
+    }
+    h1 { margin: 0; font-size: clamp(2rem, 7vw, 3rem); letter-spacing: -.055em; }
+    .subtitle { margin: 8px 0 0; color: var(--muted); font-size: .96rem; }
+    .panel {
+      background: rgba(25,31,53,.94);
+      border: 1px solid rgba(151,164,204,.16);
+      border-radius: 22px;
+      padding: clamp(14px, 3.5vw, 25px);
+      box-shadow: 0 18px 55px rgba(0,0,0,.25);
+    }
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .difficulty { display: flex; gap: 7px; flex-wrap: wrap; }
+    .pill, .lang, .new-game, .number, .erase {
+      border: 1px solid var(--line); color: var(--text); background: var(--panel-2);
+      border-radius: 11px; cursor: pointer; transition: .15s ease;
+    }
+    .pill { padding: 9px 13px; color: var(--muted); font-size: .88rem; }
+    .pill:hover, .lang:hover, .new-game:hover, .number:hover, .erase:hover { filter: brightness(1.18); transform: translateY(-1px); }
+    .pill.active { background: var(--selected); color: white; border-color: #8e80ff; }
+    .right-tools { display: flex; align-items: center; gap: 8px; }
+    .lang { padding: 9px 11px; font-size: .86rem; }
+    .new-game {
+      padding: 10px 15px; border: 0; font-weight: 750;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 6px 18px rgba(111,91,234,.25);
+    }
+    .status-row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; margin: 0 1px 12px; color: var(--muted); font-size: .85rem;
+    }
+    .status { min-height: 1.3em; }
+    .status.good { color: var(--good); }
+    .status.bad { color: var(--bad); }
+    .board-wrap { width: min(100%, 540px); margin: 0 auto; }
+    .board {
+      width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr); border: 2px solid var(--line-strong);
+      border-radius: 8px; overflow: hidden; background: var(--line-strong);
+      gap: 1px;
+    }
+    .cell {
+      min-width: 0; min-height: 0; border: 0; border-radius: 0; padding: 0;
+      display: grid; place-items: center; background: var(--cell); color: var(--text);
+      font-size: clamp(1rem, 4.3vw, 1.55rem); font-weight: 550; cursor: pointer;
+      position: relative; outline: none;
+    }
+    .cell:nth-child(3n) { border-right: 0; }
+    .cell.box-right { border-right: 2px solid var(--line-strong); }
+    .cell.box-bottom { border-bottom: 2px solid var(--line-strong); }
+    .cell.given { color: #d9def1; font-weight: 800; }
+    .cell.related { background: var(--related); }
+    .cell.same { background: var(--same); color: #d5ceff; font-weight: 800; }
+    .cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px #b2a8ff; z-index: 1; }
+    .cell:focus-visible { box-shadow: inset 0 0 0 2px white; z-index: 2; }
+    .cell.wrong { color: var(--bad); }
+    .controls { width: min(100%, 540px); margin: 18px auto 0; }
+    .keypad { display: grid; grid-template-columns: repeat(9, 1fr); gap: 7px; }
+    .number {
+      min-height: 48px; font-size: 1.15rem; font-weight: 750;
+      background: #252d49; border-color: #414d6e;
+    }
+    .number:disabled { opacity: .38; cursor: default; transform: none; }
+    .bottom-controls {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; margin-top: 11px;
+    }
+    .erase { padding: 10px 14px; color: var(--muted); }
+    .help { color: var(--muted); font-size: .78rem; text-align: right; }
+    .progress-line {
+      height: 6px; background: #303954; border-radius: 99px; overflow: hidden;
+      margin-top: 20px;
+    }
+    .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #7a69f5, #53d9ae); transition: width .2s; }
+    .footer-note { text-align: center; color: #7885a5; font-size: .78rem; margin: 17px 0 0; }
+    .win-overlay {
+      position: fixed; inset: 0; display: none; place-items: center; padding: 20px;
+      background: rgba(7,10,20,.76); z-index: 10; backdrop-filter: blur(7px);
+    }
+    .win-overlay.show { display: grid; }
+    .win-card {
+      width: min(100%, 390px); text-align: center; padding: 32px 25px;
+      border-radius: 22px; background: #202943; border: 1px solid #6559a9;
+      box-shadow: 0 24px 80px rgba(0,0,0,.45);
+    }
+    .trophy { font-size: 3rem; margin-bottom: 8px; }
+    .win-card h2 { margin: 0 0 8px; font-size: 1.8rem; }
+    .win-card p { color: var(--muted); margin: 0 0 22px; }
+    .win-card .new-game { padding: 12px 20px; }
+    @media (max-width: 520px) {
+      body { padding: 20px 10px 28px; }
+      header { margin-bottom: 18px; }
+      .panel { border-radius: 17px; padding: 13px 10px 16px; }
+      .toolbar { align-items: stretch; }
+      .difficulty { width: 100%; justify-content: center; }
+      .right-tools { width: 100%; justify-content: space-between; }
+      .pill { flex: 1; padding: 9px 7px; }
+      .keypad { gap: 4px; }
+      .number { min-height: 43px; border-radius: 8px; }
+      .cell { font-size: clamp(.9rem, 5vw, 1.3rem); }
+      .help { font-size: .7rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="eyebrow" id="eyebrow">Number puzzle</div>
+      <h1>Sudoku</h1>
+      <p class="subtitle" id="subtitle">Fill every row, column and 3 × 3 box.</p>
+    </header>
+
+    <section class="panel" aria-label="Sudoku game">
+      <div class="toolbar">
+        <div class="difficulty" role="group" aria-label="Difficulty">
+          <button class="pill active" data-level="1" id="easyBtn">Easy</button>
+          <button class="pill" data-level="2" id="mediumBtn">Medium</button>
+          <button class="pill" data-level="3" id="hardBtn">Hard</button>
+        </div>
+        <div class="right-tools">
+          <button class="lang" id="languageBtn" type="button">简体中文</button>
+          <button class="new-game" id="newGameBtn" type="button">New game ↻</button>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <span id="levelLabel">Easy puzzle</span>
+        <span class="status" id="status" role="status" aria-live="polite">Select an empty square to begin.</span>
+      </div>
+
+      <div class="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="Sudoku board"></div>
+      </div>
+
+      <div class="controls">
+        <div class="keypad" id="keypad" aria-label="Number pad"></div>
+        <div class="bottom-controls">
+          <button class="erase" id="eraseBtn" type="button">⌫ Erase</button>
+          <span class="help" id="helpText">Tip: You can also use your keyboard (1–9).</span>
+        </div>
+        <div class="progress-line" aria-label="Puzzle completion">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </section>
+    <p class="footer-note" id="footerNote">A fresh puzzle is generated every time you start a new game.</p>
+  </main>
+
+  <div class="win-overlay" id="winOverlay" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <div class="win-card">
+      <div class="trophy">🏆</div>
+      <h2 id="winTitle">You won!</h2>
+      <p id="winMessage">Congratulations! You completed the Sudoku puzzle.</p>
+      <button class="new-game" id="playAgainBtn" type="button">Play again</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const SIZE = 9;
+      const CLUES = { 1: 55, 2: 40, 3: 20 };
+      const text = {
+        en: {
+          subtitle: "Fill every row, column and 3 × 3 box.",
+          easy: "Easy", medium: "Medium", hard: "Hard",
+          newGame: "New game ↻", level: ["", "Easy puzzle", "Medium puzzle", "Hard puzzle"],
+          choose: "Select an empty square to begin.",
+          correct: "Correct!", wrong: "Wrong answer. Try again!",
+          occupied: "That square is already filled.",
+          select: "Select an empty square first.",
+          complete: "You won!", congratulations: "Congratulations! You completed the Sudoku puzzle.",
+          playAgain: "Play again", erase: "⌫ Erase",
+          help: "Tip: You can also use your keyboard (1–9).",
+          footer: "A fresh puzzle is generated every time you start a new game.",
+          language: "简体中文", invalid: "That number doesn't fit here.",
+          filled: "Puzzle completed!"
+        },
+        zh: {
+          subtitle: "填满每一行、每一列和每一个 3 × 3 宫格。",
+          easy: "简单", medium: "中等", hard: "困难",
+          newGame: "新游戏 ↻", level: ["", "简单难度", "中等难度", "困难难度"],
+          choose: "请选择一个空格开始。",
+          correct: "回答正确！", wrong: "答案错误，请再试一次！",
+          occupied: "这个格子已经有数字了。",
+          select: "请先选择一个空格。",
+          complete: "恭喜你！", congratulations: "恭喜你！你成功完成数独！",
+          playAgain: "再玩一次", erase: "⌫ 擦除",
+          help: "提示：也可以使用键盘输入数字（1–9）。",
+          footer: "每次开始新游戏，都会生成一道全新的数独题目。",
+          language: "English", invalid: "这个数字不符合数独答案。",
+          filled: "数独已完成！"
+        }
+      };
+
+      let language = "en";
+      let difficulty = 1;
+      let solution = [];
+      let puzzle = [];
+      let values = [];
+      let selected = null;
+      let wrongCells = new Set();
+      let gameWon = false;
+
+      const $ = id => document.getElementById(id);
+      const boardEl = $("board");
+      const statusEl = $("status");
+
+      function t(key) { return text[language][key]; }
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+      function isValid(grid, row, col, num) {
+        for (let i = 0; i < SIZE; i++) {
+          if (grid[row][i] === num || grid[i][col] === num) return false;
+        }
+        const startRow = Math.floor(row / 3) * 3;
+        const startCol = Math.floor(col / 3) * 3;
+        for (let r = startRow; r < startRow + 3; r++) {
+          for (let c = startCol; c < startCol + 3; c++) {
+            if (grid[r][c] === num) return false;
+          }
+        }
+        return true;
+      }
+      function generateSudoku() {
+        const grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+        function fill() {
+          let row = -1, col = -1;
+          outer: for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+              if (grid[r][c] === 0) { row = r; col = c; break outer; }
+            }
+          }
+          if (row === -1) return true;
+          for (const num of shuffle([1,2,3,4,5,6,7,8,9])) {
+            if (isValid(grid, row, col, num)) {
+              grid[row][col] = num;
+              if (fill()) return true;
+              grid[row][col] = 0;
+            }
+          }
+          return false;
+        }
+        fill();
+        return grid;
+      }
+      function makePuzzle() {
+        solution = generateSudoku();
+        puzzle = solution.map(row => row.slice());
+        let hidden = 81 - CLUES[difficulty];
+        while (hidden > 0) {
+          const row = Math.floor(Math.random() * 9);
+          const col = Math.floor(Math.random() * 9);
+          if (puzzle[row][col] !== 0) {
+            puzzle[row][col] = 0;
+            hidden--;
+          }
+        }
+        values = puzzle.map(row => row.slice());
+      }
+      function setStatus(message, type = "") {
+        statusEl.textContent = message;
+        statusEl.className = "status" + (type ? " " + type : "");
+      }
+      function renderBoard() {
+        boardEl.innerHTML = "";
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            const index = r * 9 + c;
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "cell";
+            cell.setAttribute("role", "gridcell");
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+            cell.setAttribute("aria-label", `${language === "en" ? "Row" : "第"} ${r+1}, ${language === "en" ? "column" : "列"} ${c+1}, ${values[r][c] || (language === "en" ? "empty" : "空格")}`);
+            if (puzzle[r][c] !== 0) cell.classList.add("given");
+            if (r % 3 === 2 && r !== 8) cell.classList.add("box-bottom");
+            if (c % 3 === 2 && c !== 8) cell.classList.add("box-right");
+            if (selected) {
+              const [sr, sc] = selected;
+              if (r === sr || c === sc || (Math.floor(r/3) === Math.floor(sr/3) && Math.floor(c/3) === Math.floor(sc/3))) cell.classList.add("related");
+              if (values[r][c] !== 0 && values[r][c] === values[sr][sc]) cell.classList.add("same");
+              if (r === sr && c === sc) cell.classList.add("selected");
+            }
+            if (wrongCells.has(index)) cell.classList.add("wrong");
+            cell.textContent = values[r][c] || "";
+            cell.addEventListener("click", () => {
+              selected = [r, c];
+              setStatus(puzzle[r][c] ? t("occupied") : t("choose"));
+              renderBoard();
+            });
+            boardEl.appendChild(cell);
+          }
+        }
+        updateProgress();
+      }
+      function updateProgress() {
+        let filled = 0;
+        for (const row of values) for (const n of row) if (n !== 0) filled++;
+        $("progressFill").style.width = (filled / 81 * 100) + "%";
+      }
+      function renderKeypad() {
+        $("keypad").innerHTML = "";
+        for (let n = 1; n <= 9; n++) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "number";
+          button.textContent = n;
+          button.setAttribute("aria-label", `${language === "en" ? "Enter" : "输入"} ${n}`);
+          button.addEventListener("click", () => enterNumber(n));
+          $("keypad").appendChild(button);
+        }
+      }
+      function updateLanguage() {
+        document.documentElement.lang = language === "en" ? "en" : "zh-CN";
+        $("subtitle").textContent = t("subtitle");
+        $("easyBtn").textContent = t("easy");
+        $("mediumBtn").textContent = t("medium");
+        $("hardBtn").textContent = t("hard");
+        $("newGameBtn").textContent = t("newGame");
+        $("languageBtn").textContent = t("language");
+        $("playAgainBtn").textContent = t("playAgain");
+        $("eraseBtn").textContent = t("erase");
+        $("helpText").textContent = t("help");
+        $("footerNote").textContent = t("footer");
+        $("levelLabel").textContent = t("level")[difficulty];
+        renderKeypad();
+        renderBoard();
+        if (!gameWon) setStatus(t("choose"));
+        $("winTitle").textContent = t("complete");
+        $("winMessage").textContent = t("congratulations");
+      }
+      function enterNumber(num) {
+        if (gameWon) return;
+        if (!selected) { setStatus(t("select"), "bad"); return; }
+        const [r, c] = selected;
+        if (puzzle[r][c] !== 0) { setStatus(t("occupied"), "bad"); return; }
+        const index = r * 9 + c;
+        if (solution[r][c] === num) {
+          values[r][c] = num;
+          wrongCells.delete(index);
+          setStatus(t("correct"), "good");
+          renderBoard();
+          checkWin();
+        } else {
+          wrongCells.add(index);
+          setStatus(t("wrong"), "bad");
+          renderBoard();
+        }
+      }
+      function eraseSelected() {
+        if (!selected || gameWon) return;
+        const [r, c] = selected;
+        if (puzzle[r][c] !== 0) { setStatus(t("occupied"), "bad"); return; }
+        values[r][c] = 0;
+        wrongCells.delete(r * 9 + c);
+        setStatus(t("choose"));
+        renderBoard();
+      }
+      function checkWin() {
+        for (let r = 0; r < 9; r++) {
+          for (let c = 0; c < 9; c++) {
+            if (values[r][c] !== solution[r][c]) return;
+          }
+        }
+        gameWon = true;
+        setStatus(t("complete"), "good");
+        $("winOverlay").classList.add("show");
+        $("playAgainBtn").focus();
+      }
+      function startGame() {
+        gameWon = false;
+        selected = null;
+        wrongCells = new Set();
+        $("winOverlay").classList.remove("show");
+        makePuzzle();
+        $("levelLabel").textContent = t("level")[difficulty];
+        document.querySelectorAll(".pill").forEach(btn => btn.classList.toggle("active", Number(btn.dataset.level) === difficulty));
+        setStatus(t("choose"));
+        renderBoard();
+      }
+
+      document.querySelectorAll(".pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+          difficulty = Number(btn.dataset.level);
+          startGame();
+        });
+      });
+      $("newGameBtn").addEventListener("click", startGame);
+      $("playAgainBtn").addEventListener("click", startGame);
+      $("languageBtn").addEventListener("click", () => {
+        language = language === "en" ? "zh" : "en";
+        updateLanguage();
+      });
+      $("eraseBtn").addEventListener("click", eraseSelected);
+      document.addEventListener("keydown", event => {
+        if (event.key >= "1" && event.key <= "9") {
+          if (document.activeElement && document.activeElement.classList.contains("cell")) event.preventDefault();
+          enterNumber(Number(event.key));
+        } else if (event.key === "Backspace" || event.key === "Delete" || event.key === "0") {
+          eraseSelected();
+        } else if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(event.key)) {
+          if (!selected) return;
+          event.preventDefault();
+          let [r,c] = selected;
+          if (event.key === "ArrowUp") r = (r + 8) % 9;
+          if (event.key === "ArrowDown") r = (r + 1) % 9;
+          if (event.key === "ArrowLeft") c = (c + 8) % 9;
+          if (event.key === "ArrowRight") c = (c + 1) % 9;
+          selected = [r,c];
+          renderBoard();
+          const target = boardEl.children[r*9+c];
+          if (target) target.focus();
+        }
+      });
+
+      updateLanguage();
+      startGame();
+    })();
+  </script>
+</body>
+</html>
