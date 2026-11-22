@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数独游戏源代码 - Sudoku Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #252526;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: #2d2d30;
+            padding: 15px 20px;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .header h1 {
+            font-size: 18px;
+            color: #cccccc;
+            font-weight: normal;
+        }
+        .header .filename {
+            font-size: 12px;
+            color: #858585;
+            margin-top: 5px;
+        }
+        .code-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+        pre {
+            margin: 0;
+            font-size: 14px;
+        }
+        .line {
+            display: flex;
+        }
+        .line-number {
+            color: #858585;
+            text-align: right;
+            padding-right: 20px;
+            user-select: none;
+            min-width: 50px;
+        }
+        .line-content {
+            flex: 1;
+            white-space: pre;
+        }
+        /* 语法高亮颜色 */
+        .include { color: #ce9178; }
+        .keyword { color: #569cd6; }
+        .type { color: #4ec9b0; }
+        .function { color: #dcdcaa; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; }
+        .number { color: #b5cea8; }
+        .preprocessor { color: #c586c0; }
+        .operator { color: #d4d4d4; }
+        .variable { color: #9cdcfe; }
+
+        .copy-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .copy-btn:hover {
+            background: #1177bb;
+        }
+        .wrapper {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="wrapper">
+            <div class="header">
+                <h1>Sudoku Game - 数独游戏 C++ 源代码</h1>
+                <div class="filename">1795348942662_uKC8_.cpp</div>
+            </div>
+            <button class="copy-btn" onclick="copyCode()">复制代码</button>
+            <div class="code-container">
+                <pre id="code"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const code = `#include <bits/stdc++.h>
+using namespace std;
+int sudoku[9][9];
+int answer[9][9];
+int language;
+// ��������
+void printText(string english, string chinese)
+{
+    if(language == 1)
+        cout << english;
+    else
+        cout << chinese;
+}
+// ���������Ƿ�������������
+bool isValid(int row, int col, int num)
+{
+    for(int i = 0; i < 9; i++)
+    {
+        if(answer[row][i] == num) return false;
+        if(answer[i][col] == num) return false;
+    }
+    int startRow = (row / 3) * 3;
+    int startCol = (col / 3) * 3;
+    for(int i = startRow; i < startRow + 3; i++)
+    {
+        for(int j = startCol; j < startCol + 3; j++)
+        {
+            if(answer[i][j] == num)
+                return false;
+        }
+    }
+    return true;
+}
+// ������������
+bool generateSudoku()
+{
+    int row = -1, col = -1;
+    bool found = false;
+    for(int i = 0; i < 9; i++)
+    {
+        for(int j = 0; j < 9; j++)
+        {
+            if(answer[i][j] == 0)
+            {
+                row = i;
+                col = j;
+                found = true;
+                break;
+            }
+        }
+        if(found) break;
+    }
+    if(!found) return true;
+    int nums[9] = {1,2,3,4,5,6,7,8,9};
+    random_shuffle(nums, nums + 9);
+    for(int i = 0; i < 9; i++)
+    {
+        int num = nums[i];
+        if(isValid(row, col, num))
+        {
+            answer[row][col] = num;
+            if(generateSudoku())
+                return true;
+            answer[row][col] = 0;
+        }
+    }
+    return false;
+}
+// ��ʾ����
+void displaySudoku()
+{
+    cout << "\\n";
+    for(int i = 0; i < 9; i++)
+    {
+        if(i % 3 == 0 && i != 0)
+            cout << "------+-------+------\\n";
+        for(int j = 0; j < 9; j++)
+        {
+            if(j % 3 == 0 && j != 0)
+                cout << "| ";
+            if(sudoku[i][j] == 0)
+                cout << "? ";
+            else
+                cout << sudoku[i][j] << " ";
+        }
+        cout << endl;
+    }
+}
+// �����Ѷ�
+void setDifficulty(int difficulty)
+{
+    int clues;
+    if(difficulty == 1)
+        clues = 55;
+    else if(difficulty == 2)
+        clues = 40;
+    else
+        clues = 20;
+    for(int i = 0; i < 9; i++)
+    {
+        for(int j = 0; j < 9; j++)
+            sudoku[i][j] = answer[i][j];
+    }
+    int hidden = 81 - clues;
+    while(hidden > 0)
+    {
+        int row = rand() % 9;
+        int col = rand() % 9;
+        if(sudoku[row][col] != 0)
+        {
+            sudoku[row][col] = 0;
+            hidden--;
+        }
+    }
+}
+// ������
+int main()
+{
+    srand(time(0));
+    cout << "========================\\n";
+    cout << "       SUDOKU GAME\\n";
+    cout << "========================\\n";
+    cout << "1. English\\n";
+    cout << "2. ��������\\n";
+    printText("Choose language: ", "��ѡ�����ԣ�");
+    cin >> language;
+    if(language != 1 && language != 2)
+    {
+        cout << "Invalid selection!\\n";
+        return 0;
+    }
+    cout << "\\n========================\\n";
+    printText("Select Difficulty\\n", "��ѡ���Ѷ�\\n");
+    printText("1. Easy\\n", "1. ����\\n");
+    printText("2. Medium\\n", "2. �е�\\n");
+    printText("3. Hard\\n", "3. ����\\n");
+    printText("Enter difficulty: ", "�������Ѷȣ�");
+    int difficulty;
+    cin >> difficulty;
+    if(difficulty < 1 || difficulty > 3)
+    {
+        printText("Invalid difficulty!\\n", "��Ч���Ѷ�ѡ����\\n");
+        return 0;
+    }
+    generateSudoku();
+    setDifficulty(difficulty);
+    while(true)
+    {
+        displaySudoku();
+        int row, col, num;
+        printText(
+            "\\nEnter row, column and number (0 0 0 to quit): ",
+            "\\n���������������������֣����� 0 0 0 �˳�����"
+        );
+        cin >> row >> col >> num;
+        if(row == 0 && col == 0 && num == 0)
+        {
+            printText("Game ended.\\n", "��Ϸ�ѽ�����\\n");
+            break;
+        }
+        if(row < 1 || row > 9 ||
+           col < 1 || col > 9 ||
+           num < 1 || num > 9)
+        {
+            printText("Invalid input!\\n", "������Ч��\\n");
+            continue;
+        }
+        row--;
+        col--;
+        if(sudoku[row][col] != 0)
+        {
+            printText(
+                "This cell is already occupied!\\n",
+                "���������Ѿ��������ˣ�\\n"
+            );
+            continue;
+        }
+        if(answer[row][col] == num)
+        {
+            sudoku[row][col] = num;
+            printText("Correct!\\n", "�ش���ȷ��\\n");
+        }
+        else
+        {
+            printText("Wrong answer!\\n", "�𰸴�����\\n");
+    	}
+        bool completed = true;
+        for(int i = 0; i < 9; i++)
+        {
+            for(int j = 0; j < 9; j++)
+            {
+                if(sudoku[i][j] == 0)
+                    completed = false;
+            }
+        }
+        if(completed)
+        {
+            displaySudoku();
+            printText(
+                "\\nCongratulations! You won!\\n",
+                "\\n��ϲ�㣡���ɹ�����������\\n"
+            );
+            break;
+        }
+    }
+    return 0;
+}`;
+
+        // 简单的语法高亮处理
+        function highlightSyntax(line) {
+            // 预处理：注释
+            if (line.trim().startsWith('//')) {
+                return '<span class="comment">' + escapeHtml(line) + '</span>';
+            }
+            
+            let result = escapeHtml(line);
+            
+            // 预处理指令和include
+            result = result.replace(/(#include\s*&lt;[^&]*&gt;)/g, '<span class="preprocessor">$1</span>');
+            
+            // 字符串
+            result = result.replace(/(&quot;[^&]*?&quot;)/g, '<span class="string">$1</span>');
+            
+            // 关键字
+            const keywords = ['using', 'namespace', 'int', 'void', 'bool', 'string', 'if', 'else', 'for', 'while', 'return', 'break', 'continue', 'true', 'false'];
+            keywords.forEach(kw => {
+                const regex = new RegExp('\\b(' + kw + ')\\b', 'g');
+                result = result.replace(regex, '<span class="keyword">$1</span>');
+            });
+            
+            // 函数名
+            result = result.replace(/\b(printText|isValid|generateSudoku|displaySudoku|setDifficulty|srand|rand|time|random_shuffle)\b/g, '<span class="function">$1</span>');
+            
+            // 数字
+            result = result.replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
+            
+            // cout/cin/endl
+            result = result.replace(/\b(cout|cin|endl)\b/g, '<span class="variable">$1</span>');
+            
+            return result;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 渲染代码
+        function renderCode() {
+            const lines = code.split('\\n');
+            const codeEl = document.getElementById('code');
+            codeEl.innerHTML = lines.map((line, index) => {
+                const lineNum = index + 1;
+                return `<div class="line"><span class="line-number">${lineNum}</span><span class="line-content">${highlightSyntax(line) || ' '}</span></div>`;
+            }).join('');
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '已复制!';
+                setTimeout(() => {
+                    btn.textContent = '复制代码';
+                }, 2000);
+            });
+        }
+
+        renderCode();
+    </script>
+</body>
+</html>
